@@ -1,0 +1,151 @@
+From 2ab6c3f82967263d94e5c75f3ae8c814a26206a6 Mon Sep 17 00:00:00 2001
+From: kamal126 <54989946+kamal126@users.noreply.github.com>
+Date: Wed, 28 Aug 2024 21:53:10 +0530
+Subject: [PATCH] update App.tsx, Graph.tsx
+
+---
+ package-lock.json |  3 ++-
+ package.json      |  2 +-
+ src/App.tsx       | 27 ++++++++++++++++++++-------
+ src/Graph.tsx     | 13 +++++++++++--
+ 4 files changed, 34 insertions(+), 11 deletions(-)
+
+diff --git a/package-lock.json b/package-lock.json
+index 21b4315..6226064 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -20,7 +20,7 @@
+         "puppeteer": "^1.19.0",
+         "react": "^16.9.0",
+         "react-dom": "^16.9.0",
+-        "react-scripts": "2.1.3"
++        "react-scripts": "^2.1.3"
+       },
+       "devDependencies": {
+         "awesome-typescript-loader": "^5.2.1",
+@@ -15996,6 +15996,7 @@
+       "version": "2.1.3",
+       "resolved": "https://registry.npmjs.org/react-scripts/-/react-scripts-2.1.3.tgz",
+       "integrity": "sha512-JASD0QVVgSVleVhA9TeA+UBx+shq887hm/L+09qjZLrqIUvJZHZU+oOnhMFGot02Yop+LKfkvf9KSsTNlu/Rwg==",
++      "license": "MIT",
+       "dependencies": {
+         "@babel/core": "7.1.6",
+         "@svgr/webpack": "2.4.1",
+diff --git a/package.json b/package.json
+index ca234e9..5cf500d 100644
+--- a/package.json
++++ b/package.json
+@@ -15,7 +15,7 @@
+     "puppeteer": "^1.19.0",
+     "react": "^16.9.0",
+     "react-dom": "^16.9.0",
+-    "react-scripts": "2.1.3"
++    "react-scripts": "^2.1.3"
+   },
+   "scripts": {
+     "start": "react-scripts --openssl-legacy-provider start",
+diff --git a/src/App.tsx b/src/App.tsx
+index 0728518..42a280d 100755
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -2,12 +2,14 @@ import React, { Component } from 'react';
+ import DataStreamer, { ServerRespond } from './DataStreamer';
+ import Graph from './Graph';
+ import './App.css';
++import { setInterval } from 'timers';
+ 
+ /**
+  * State declaration for <App />
+  */
+ interface IState {
+   data: ServerRespond[],
++  showGraph: boolean,
+ }
+ 
+ /**
+@@ -22,6 +24,7 @@ class App extends Component<{}, IState> {
+       // data saves the server responds.
+       // We use this state to parse data down to the child element (Graph) as element property
+       data: [],
++      showGraph: false,
+     };
+   }
+ 
+@@ -29,19 +32,29 @@ class App extends Component<{}, IState> {
+    * Render Graph react component with state.data parse as property data
+    */
+   renderGraph() {
+-    return (<Graph data={this.state.data}/>)
++    if(this.state.showGraph){
++      return (<Graph data={this.state.data}/>)
++    }
+   }
+ 
+   /**
+    * Get new data from server and update the state with the new data
+    */
+   getDataFromServer() {
+-    DataStreamer.getData((serverResponds: ServerRespond[]) => {
+-      // Update the state by creating a new array of data that consists of
+-      // Previous data in the state and the new data from server
+-      this.setState({ data: [...this.state.data, ...serverResponds] });
+-    });
+-  }
++    let x = 0;
++    const interval = setInterval(() => {
++      DataStreamer.getData((serverResponds: ServerRespond[]) => {
++        this.setState({ 
++          data: serverResponds,
++          showGraph: true,
++        });
++      });
++      x++;
++      if (x > 1000){
++        clearInterval(interval);
++      }
++  },100);
++}
+ 
+   /**
+    * Render the App react component
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+index 3b2a7da..ba8355d 100644
+--- a/src/Graph.tsx
++++ b/src/Graph.tsx
+@@ -14,7 +14,7 @@ interface IProps {
+  * Perspective library adds load to HTMLElement prototype.
+  * This interface acts as a wrapper for Typescript compiler.
+  */
+-interface PerspectiveViewerElement {
++interface PerspectiveViewerElement extends HTMLElement{
+   load: (table: Table) => void,
+ }
+ 
+@@ -32,7 +32,7 @@ class Graph extends Component<IProps, {}> {
+ 
+   componentDidMount() {
+     // Get element to attach the table from the DOM.
+-    const elem: PerspectiveViewerElement = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
++    const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
+ 
+     const schema = {
+       stock: 'string',
+@@ -49,6 +49,15 @@ class Graph extends Component<IProps, {}> {
+ 
+       // Add more Perspective configurations here.
+       elem.load(this.table);
++      elem.setAttribute('view', 'y_line');
++      elem.setAttribute('column-pivots', '["stock"]');
++      elem.setAttribute('row-pivots', '["timestamp"]');
++      elem.setAttribute('columns','["top_ask_price"]');
++      elem.setAttribute('aggregates', `
++      {"stock": "distinct count",
++      "top_ask_price":"avg",
++      "top_bid_price": "avg",
++      "timestamp":"distinct count"}`);
+     }
+   }
+ 
+-- 
+2.34.1.windows.1
+
